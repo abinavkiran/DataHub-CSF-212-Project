@@ -20,6 +20,8 @@ DataHub separates the logical state of a project from its physical storage.
 ### 3.2. The Database Schema (DBMS Core)
 The relational database acts as the "Index" and "State Manager" for the system. It implements a **Merkle Directed Acyclic Graph (DAG)** to track versioning and data integrity.
 
+![DataHub ER Diagram](DataHub_ER_Diagram.png)
+
 #### Core Entities & Attributes
 
 | Entity | Primary Attributes | Description |
