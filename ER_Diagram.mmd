@@ -1,0 +1,43 @@
+erDiagram
+    COMMIT ||--o{ COMMIT : "parent_of"
+    COMMIT ||--|| TREE : "points_to_root"
+    COMMIT ||--o{ METADATA : "has_stats"
+    
+    TREE ||--o{ TREE_ENTRY : "contains"
+    TREE_ENTRY }|--|| BLOB : "references_data"
+    TREE_ENTRY }|--|| TREE : "references_sub-directory"
+
+    BLOB ||--o{ METADATA : "describes"
+
+    COMMIT {
+        string commit_hash PK
+        string parent_hash FK
+        string author
+        timestamp created_at
+        string message
+    }
+
+    TREE {
+        string tree_hash PK
+    }
+
+    TREE_ENTRY {
+        int id PK
+        string tree_hash FK
+        string name
+        string mode "file or dir"
+        string object_hash FK "points to Blob or Tree"
+    }
+
+    BLOB {
+        string blob_hash PK
+        bigint size_bytes
+        string storage_path "Physical location"
+        boolean is_compressed
+    }
+
+    METADATA {
+        int id PK
+        string target_hash FK "Commit or Blob hash"
+        jsonb stats "schema, row_count, metrics"
+    }
