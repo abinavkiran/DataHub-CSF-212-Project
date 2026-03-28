@@ -1,0 +1,16 @@
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+venv/
+.env
+
+# Pytest
+.pytest_cache/
+
+# DataHub specific
+blobs/
+test_data/
+.pytest_cache/
