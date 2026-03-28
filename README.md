@@ -41,23 +41,38 @@ The relational database acts as the "Index" and "State Manager" for the system. 
 - **TreeObjects Table**: Stores directory structures as JSONB objects, mapping file paths to their respective Blob Hashes.
 - **Metadata Table**: A queryable index that extracts and stores statistical properties of the data (e.g., row counts, schema definitions, model accuracy metrics) upon commit.
 
-## 4. Functional Modules & Team Division
-The development is divided into six distinct backend engineering roles, ensuring parallel execution and structural modularity.
+## 4. Standardized Technical Stack & Interfaces
 
-| Module | Scope & Key Deliverables | Team Member |
-| :--- | :--- | :--- |
-| **Module 1: DAG Architecture & Schema Design** | Implementation of recursive SQL schema (CTEs) to manage commit history and branch pointers. | **Abinav Kiran** (@abinavkiran) |
-| **Module 2: Storage Engine & Deduplication** | Development of the hashing engine (SHA-256) and optimized "Put/Get" system to prevent redundant writes. | **Aditya Khemka** (@Aditya-Khemka) |
-| **Module 3: Client-Side CLI (Python)** | Development of the user-facing terminal tool (`datahub init`, `push`, `pull`) for file scanning and API communication. | **Kedar Medishetty** (@KedarMedishetty) |
-| **Module 4: High-Performance Networking** | Implementation of API Gateway (HTTP/2) handling multipart binary streams and chunked upload protocols. | **Romir Shetty** (@romir3) |
-| **Module 5: Metadata Extraction & Indexing** | Automated parsing logic for CSV, JSON, and Parquet files to index statistical metadata upon commit. | **Saurabh Kumar** (@sko2004) |
-| **Module 6: Query Language & Reporting** | Domain-specific query parser allowing users to filter data versions via metrics (e.g., `datahub log --metric "accuracy > 0.9"`). | **Pashuvula Niranand Reddy** (@niranand11) |
+To perfectly decouple concurrent development across six developers while guaranteeing everything compiles together flawlessly, we mandate a homogeneous **100% Python Architecture globally managed inside a shared Docker container footprint.**
+- **Datastore:** PostgreSQL Native CTEs interacting logically via strict SQLAlchemy (no raw SQL allowed).
+- **Storage/Parser:** Python chunks bound by OS-level generators iterating streams (drastically reducing RAM overhead on ML Blobs).
+- **Communication:** Internal modules natively import cleanly. The only boundary layer rests between the user's Client CLI and the API Gateway (FastAPI `POST`).
 
-## 5. Technical Stack
-- **Database**: PostgreSQL (utilizing Recursive CTEs and JSONB).
-- **Backend**: Go (Golang) or Python (FastAPI) for high-concurrency handling.
-- **CLI Client**: Python (Click/Argparse).
-- **Protocol**: HTTP/2 for efficient binary streaming.
+## 5. Implementation Orchestration (How It Fits Together)
 
-## 6. Conclusion
-DataHub demonstrates advanced proficiency in Database Management Systems by applying complex data structures (Merkle Trees) within a relational model. It solves a critical real-world infrastructure problem, prioritizing data integrity, storage optimization, and system scalability.
+Every module owner assumes a distinct "Black Box" approach, consuming and exposing predictable Python contracts defined in the README files contained sequentially inside your explicit directory (e.g. `storage/README.md`):
+
+1. **Upload Triggered (CLI -> API):** Medishetty's CLI (`Module 3`) hashes files, skipping overlaps locally, then chunks new streams executing natively into Shetty's Router (`Module 4`).
+2. **Ingestion (API -> Storage):** The Gateway catches streams via FastAPI `UploadFile`, streaming chunks straight to Khemka's Deduplication Engine (`Module 2`), securing the Blob.
+3. **Analytics (Storage -> Metadata):** Upon hitting the immutable disk layer, Shetty triggers Kumar's Parsing script (`Module 5`), extracting structural integrity JSONs describing dataset anomalies safely.
+4. **Commit & Lineage (API -> Architecture):** With hashes generated, the Payload executes natively into Kiran's DAG Schema (`Module 1`), locking the snapshot logically against topological Git-like parents generating Recursive pointers.
+5. **Search/Report (CLI -> Query -> Architecture):** Users query their analytics (`datahub log --metric "accuracy > 0.9"`). Reddy's Query DSL Parser (`Module 6`) consumes the string protecting it via AST maps before pulling Native CTE matches efficiently mapping backwards.
+
+## 6. Global Execution & Testing
+
+Everything operates inside Docker natively. Natively installing local dependencies outside of `docker-compose.yml` guarantees execution divergence and is forbidden. 
+
+### Bootstrapping The Repository
+1. Install Docker Desktop.
+2. Spin up the underlying Database and unified isolated test shell:
+   ```bash
+   docker-compose up -d --build
+   ```
+3. Your local folder dynamically mounts inside the container (`dev-env`), enabling instant development reflection natively avoiding OS mismatching scripts. 
+
+### Running Modular Assertions
+Inside your component folders (e.g., `api/tests`), you define decoupled pytest methods enforcing your individual components constraints smoothly. Execute them blindly utilizing Docker:
+```bash
+docker-compose run --rm dev-env pytest
+```
+When all individual tests hit an Exit Code 0, the final seamless pipeline guarantees successful deployment perfectly aligned.
