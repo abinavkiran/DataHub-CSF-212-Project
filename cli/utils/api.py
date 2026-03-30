@@ -11,7 +11,7 @@ def upload_file(remote_url, file_hash, filepath):
         data = {"hash": file_hash}
 
         response = requests.post(
-            f"{remote_url}/upload",
+            f"{remote_url}/blobs",
             files=files,
             data=data
         )
