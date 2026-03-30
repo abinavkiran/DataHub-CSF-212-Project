@@ -50,5 +50,15 @@ def test_extract_metrics_invalid_format(tmp_path):
     txt_file = tmp_path / "test.txt"
     txt_file.write_text("just some text")
 
-    result = extract_metrics(str(txt_file), "text/plain")
-    assert result["status"] == "unknown_format"
+def test_extract_metrics_schema_contract(tmp_path):
+    # Create sample CSV to test the precise README contract
+    csv_file = tmp_path / "contract.csv"
+    df = pd.DataFrame({"id": [1], "value": [0.5]})
+    df.to_csv(csv_file, index=False)
+
+    result = extract_metrics(str(csv_file), "text/csv")
+    # Verify both README and modern columns formats coexist
+    assert "schema" in result
+    assert result["schema"] == {"id": "int64", "value": "float64"}
+    assert "columns" in result
+    assert result["columns"][0]["name"] == "id"

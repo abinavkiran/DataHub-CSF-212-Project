@@ -19,6 +19,7 @@ def extract_metrics(file_path: str, mime_type: str) -> Dict[str, Any]:
             row_count = sum(1 for _ in open(file_path)) - 1 # approximate for CSV
             return {
                 "row_count": max(0, row_count),
+                "schema": {col: str(dtype) for col, dtype in df.dtypes.items()},
                 "columns": [{"name": col, "type": str(dtype)} for col, dtype in df.dtypes.items()],
                 "format": "csv"
             }
@@ -28,14 +29,17 @@ def extract_metrics(file_path: str, mime_type: str) -> Dict[str, Any]:
             df = pd.read_json(file_path)
             return {
                 "row_count": len(df),
+                "schema": {col: str(dtype) for col, dtype in df.dtypes.items()},
                 "columns": [{"name": col, "type": str(dtype)} for col, dtype in df.dtypes.items()],
                 "format": "json"
             }
 
+        # Handle Parquet
         elif "parquet" in mime_type or file_path.endswith(".parquet"):
             table = pq.read_table(file_path)
             return {
                 "row_count": table.num_rows,
+                "schema": {field.name: str(field.type) for field in table.schema},
                 "columns": [{"name": field.name, "type": str(field.type)} for field in table.schema],
                 "format": "parquet"
             }
@@ -44,9 +48,10 @@ def extract_metrics(file_path: str, mime_type: str) -> Dict[str, Any]:
         return {
             "error": str(e),
             "row_count": 0, 
+            "schema": {},
             "columns": [],
             "status": "failed"
         }
 
     # Fallback default for unknown types
-    return {"row_count": 0, "columns": [], "status": "unknown_format"}
+    return {"row_count": 0, "schema": {}, "columns": [], "status": "unknown_format"}
