@@ -2,11 +2,11 @@
 **Contributer:** Aditya Khemka
 
 ## Overview
-This module manages the immutable storage layer backing DataHub's Directed Acyclic Graph (DAG). It implements a high-efficiency **Content-Addressable Storage (CAS)** system that natively calculates SHA-256 hashes to prevent redundant disk writes and eliminate memory bloat.
+This module manages the storage layer for Datahub. It implements a **Content-Addressable Storage (CAS)** system that natively calculates SHA-256 hashes to prevent redundant disk writes and eliminate memory bloat.
 
 ## exported Operations
 
-The following functions are exposed via `storage/engine.py` to be consumed by the API Gateway:
+The following functions are exposed via `storage/engine.py` to be used by the API Gateway:
 
 ### `put_blob(data_stream: BinaryIO) -> str`
 Writes an incoming data stream to disk while ensuring no data is ever duplicated.
@@ -15,10 +15,10 @@ Writes an incoming data stream to disk while ensuring no data is ever duplicated
 - **Storage:** If the hash is completely new, it writes the chunks physically to `BLOB_DIR/<hash>`.
 - **Returns:** The exact unique hex digest (e.g. `e3b0c44298fc1c...`) for the DAG pointer.
 
-### `get_blob(blob_hash: str) -> Generator[bytes, None, None]`
+### `get_blob(blob_hash: str)`
 Retrieves a previously stored file back to the network layer incrementally.
 - Uses a Python `Generator` yielding safe `8192-byte` streaming chunks.
-- Ensures massive machine-learning models can be pulled quickly without ram exhaustion.
+- Ensures massive files can be pulled quickly without ram exhaustion.
 - Immediately raises a `ValueError` if an invalid pointer is requested.
 
 ## Testing Execution
