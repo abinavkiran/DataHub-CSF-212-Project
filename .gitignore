@@ -13,6 +13,7 @@ venv/
 # DataHub specific
 blobs/
 test_data/
+.datahub/
 .pytest_cache/
 
 

@@ -1,0 +1,9 @@
+run_id,dataset_version,model,accuracy,loss
+exp001,v1.0,RandomForest,0.81,0.19
+exp002,v1.0,XGBoost,0.84,0.16
+exp003,v1.1,RandomForest,0.85,0.15
+exp004,v1.1,XGBoost,0.87,0.13
+exp005,v1.2,CatBoost,0.88,0.12
+exp006,v1.2,LightGBM,0.86,0.14
+exp007,v2.0,LightGBM,0.90,0.10
+exp008,v2.0,XGBoost,0.91,0.09

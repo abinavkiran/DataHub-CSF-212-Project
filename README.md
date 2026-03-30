@@ -81,6 +81,8 @@ When all individual tests hit an Exit Code 0, the final seamless pipeline guaran
 
 DataHub is designed to be a drop-in Version Control System for any Machine Learning repository. To natively track your data changes seamlessly, follow these CLI commands.
 
+For a fully manual, live terminal walkthrough (including direct SQL checks), use the dedicated guide in `live_demo_workspace/LIVE_DEMO.md`.
+
 *Disclaimer: Since DataHub enforces strict dependency isolation, all commands must be executed through the Docker `dev-env` shell container.*
 
 **1. Initialize a Repository**

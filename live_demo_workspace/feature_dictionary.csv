@@ -1,0 +1,6 @@
+feature_name,description,source
+customer_age,Age of customer profile,crm
+monthly_spend,Average monthly spending,billing
+support_tickets,Ticket count in last 90 days,support
+contract_type,Contract category,billing
+last_login_days,Days since last login,product_telemetry
