@@ -1,38 +1,28 @@
 # Module 2: Storage Engine & Deduplication
-**Owner:** Aditya Khemka
+**Contributer:** Aditya Khemka
 
-## Core Responsibility
-This module manages the immutable physical storage layer (the Blobs directory) backing DataHub's DAG. Your code handles all deduplication mathematics using SHA-256 natively in Python.
+## Overview
+This module manages the immutable storage layer backing DataHub's Directed Acyclic Graph (DAG). It implements a high-efficiency **Content-Addressable Storage (CAS)** system that natively calculates SHA-256 hashes to prevent redundant disk writes and eliminate memory bloat.
 
-## Contracted Interface (`storage/engine.py`)
+## exported Operations
 
-You are required to export these precise python operations, which will be blindly trusted and consumed by Romir (Module 4: API).
+The following functions are exposed via `storage/engine.py` to be consumed by the API Gateway:
 
-```python
-from typing import BinaryIO, Generator
+### `put_blob(data_stream: BinaryIO) -> str`
+Writes an incoming data stream to disk while ensuring no data is ever duplicated.
+- **Two-Pass Optimization:** It first hashes the stream chunk-by-chunk (`8192` bytes) without loading the entire stream into RAM.
+- **Atomic Deduplication:** If the resulting SHA-256 hash already exists in the `BLOB_DIR`, it skips writing to the disk entirely, returning the hash instantly ($O(1)$).
+- **Storage:** If the hash is completely new, it writes the chunks physically to `BLOB_DIR/<hash>`.
+- **Returns:** The exact unique hex digest (e.g. `e3b0c44298fc1c...`) for the DAG pointer.
 
-def put_blob(data_stream: BinaryIO) -> str:
-    """
-    Reads a raw byte stream, computes its SHA-256 hash progressively,
-    and writes the payload locally. If the hash already exists, it skips writing entirely!
-    Returns the absolute blob_hash (e.g. 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855').
-    """
-    pass
+### `get_blob(blob_hash: str) -> Generator[bytes, None, None]`
+Retrieves a previously stored file back to the network layer incrementally.
+- Uses a Python `Generator` yielding safe `8192-byte` streaming chunks.
+- Ensures massive machine-learning models can be pulled quickly without ram exhaustion.
+- Immediately raises a `ValueError` if an invalid pointer is requested.
 
-def get_blob(blob_hash: str) -> Generator[bytes, None, None]:
-    """
-    Returns an iterator streaming chunks of the stored file payload securely.
-    Throws a ValueError if the hash does not exist.
-    """
-    pass
-```
-
-## Strict Constraints
-1. **Memory Efficiency:** Datasets can be GiB in size. You **must not** buffer `data_stream.read()` completely into RAM. Use `chunk_size = 8192` iterating loops.
-2. **Immutability:** Once a blob is written, its contents are geometrically locked. You must never expose an "update_blob" method.
-
-## Execution
-Run your isolated tests leveraging the root docker instance:
+## Testing Execution
+The storage engine limits side effects by containing everything into dockerized `pytest` generators.
 ```bash
 docker-compose run --rm dev-env pytest storage/tests/test_engine.py -v
 ```
