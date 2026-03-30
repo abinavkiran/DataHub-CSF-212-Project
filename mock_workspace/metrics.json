@@ -1,0 +1,6 @@
+{
+    "accuracy": 0.94,
+    "f1_score": 0.93,
+    "loss": 0.05,
+    "model_version": "v2.0-tuned"
+}

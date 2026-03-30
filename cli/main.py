@@ -4,7 +4,7 @@ import json
 
 from cli.utils.file_scanner import scan_files
 from cli.utils.hash import get_file_hash
-from cli.utils.api import check_hash, upload_file, create_commit
+from cli.utils.api import check_hash, upload_file, create_commit, get_log, query_metadata
 from cli.utils.tree import get_tree_hash, get_commit_hash
 
 
@@ -31,7 +31,8 @@ def init():
 
 @cli.command()
 @click.argument("remote_url", required=False)
-def push(remote_url=None):
+@click.option("-m", "--message", default="Auto-commit", help="Commit message")
+def push(remote_url=None, message="Auto-commit"):
     """Pushes local commits to the server over HTTP."""
 
     # REQUIRED FOR TEST CASE
@@ -59,8 +60,9 @@ def push(remote_url=None):
                 click.echo(f"Skipping {file} (already exists)")
 
             file_map.append({
-                "path": file,
-                "hash": file_hash
+                "name": file,
+                "object_hash": file_hash,
+                "object_type": "blob"
             })
 
         except Exception as e:
@@ -74,13 +76,48 @@ def push(remote_url=None):
 
     commit_payload = {
         "commit_hash": commit_hash,
-        "tree_hash": tree_hash
+        "tree_hash": tree_hash,
+        "message": message,
+        "entries": file_map
     }
 
     response = create_commit(remote_url, commit_payload)
 
     click.echo(f"Push complete: {response}")
 
+@cli.command()
+@click.argument("remote_url")
+def log(remote_url):
+    """Shows the commit history from the server."""
+    try:
+        response = get_log(remote_url)
+        history = response.get("history", [])
+        if not history:
+            click.echo("No commits found.")
+            return
+        for commit in history:
+            click.echo(f"commit {commit['commit_hash']}")
+            click.echo(f"Author:   {commit['author']}")
+            click.echo(f"Date:     {commit['created_at']}")
+            click.echo(f"\n    {commit['message']}\n")
+    except Exception as e:
+        click.echo(f"Error fetching log: {str(e)}")
+
+@cli.command()
+@click.argument("remote_url")
+@click.argument("query_str")
+def query(remote_url, query_str):
+    """Query metadata using DSL 'metric operator value'."""
+    try:
+        response = query_metadata(remote_url, query_str)
+        results = response.get("results", [])
+        if not results:
+            click.echo("No matching metadata found.")
+            return
+        for res in results:
+            click.echo(f"Object: {res['target_hash']} | Metrics: {res['stats']}")
+    except Exception as e:
+        click.echo(f"Error executing query: {str(e)}")
 
 if __name__ == '__main__':
     cli()

@@ -14,3 +14,7 @@ venv/
 blobs/
 test_data/
 .pytest_cache/
+
+
+
+.vscode/

@@ -3,8 +3,14 @@ from sqlalchemy.orm import Session
 import os
 
 # Import contracts from Module 1 (Database) and Module 2 (Storage)
-from infrastructure.db import SessionLocal, Commit, Tree, TreeEntry, ObjectType
+from infrastructure.db import SessionLocal, Commit, Tree, TreeEntry, ObjectType, Metadata, Branch, update_branch, get_branch_history, init_db
 from storage.engine import put_blob, BLOB_DIR
+from metadata.extractor import extract_metrics
+from query.parser import build_filter, execute_query
+import mimetypes
+
+# Initialize database schemas
+init_db()
 
 app = FastAPI(title="DataHub Node API")
 
@@ -51,6 +57,9 @@ async def create_commit(payload: dict, session: Session = Depends(get_db_session
     # Check if the commit already exists
     existing_commit = session.query(Commit).filter(Commit.commit_hash == commit_hash).first()
     if existing_commit:
+        update_branch(session, "main", commit_hash)
+        # We don't rollback but commit the branch update
+        session.commit()
         return {"status": "success", "commit_hash": commit_hash, "message": "Commit already exists"}
 
     # Create the top-level tree if it doesn't already exist
@@ -93,7 +102,22 @@ async def create_commit(payload: dict, session: Session = Depends(get_db_session
                 object_type=object_type
             )
         )
+
+        if object_type == ObjectType.blob:
+            existing_meta = session.query(Metadata).filter_by(target_hash=object_hash).first()
+            if not existing_meta:
+                mime_type, _ = mimetypes.guess_type(name)
+                mime_type = mime_type or "application/octet-stream"
+                blob_path = os.path.join(BLOB_DIR, object_hash)
+                metrics = extract_metrics(blob_path, mime_type)
+                session.add(Metadata(target_hash=object_hash, stats=metrics))
     
+    # Push commit before updating branch to satisfy foreign key
+    session.flush()
+
+    # Update branch pointer
+    update_branch(session, "main", commit_hash)
+
     try:
         session.commit()
     except Exception as e:
@@ -101,3 +125,24 @@ async def create_commit(payload: dict, session: Session = Depends(get_db_session
         raise e
         
     return {"status": "success", "commit_hash": commit_hash}
+
+@app.get("/log")
+async def get_log(session: Session = Depends(get_db_session)):
+    try:
+        history = get_branch_history(session, "main")
+        return {"history": [{"commit_hash": r.commit_hash, "author": r.author, "message": r.message, "created_at": r.created_at} for r in history]}
+    except ValueError:
+        return {"history": []}
+
+@app.post("/query/")
+async def query_metadata(payload: dict, session: Session = Depends(get_db_session)):
+    query_string = payload.get("query")
+    if not query_string:
+         raise HTTPException(status_code=400, detail="Query string is required")
+    try:
+        ast = build_filter(query_string)
+        results = execute_query(session, ast)
+        return {"results": [{"target_hash": r[0].target_hash, "stats": r[0].stats} for r in results]}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+

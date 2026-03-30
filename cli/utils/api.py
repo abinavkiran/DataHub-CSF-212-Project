@@ -25,3 +25,14 @@ def create_commit(remote_url, payload):
         json=payload
     )
     return response.json()
+
+def get_log(remote_url):
+    response = requests.get(f"{remote_url}/log")
+    return response.json()
+
+def query_metadata(remote_url, query_str):
+    response = requests.post(
+        f"{remote_url}/query/",
+        json={"query": query_str}
+    )
+    return response.json()

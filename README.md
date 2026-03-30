@@ -26,7 +26,7 @@ The relational database acts as the "Index" and "State Manager" for the system. 
 
 | Entity | Primary Attributes | Description |
 | :--- | :--- | :--- |
-| **COMMIT** | `commit_hash` (PK), `parent_hash` (FK), `author`, `created_at`, `message` | Represents a specific version/snapshot of the project. Implements a recursive relationship for history. |
+| **COMMIT** | `commit_hash` (PK), `parent_hash` (FK), `author` (optional metadata), `created_at`, `message` | Represents a specific version/snapshot of the project. Implements a recursive relationship for history. |
 | **TREE** | `tree_hash` (PK) | Represents a directory structure. Serves as a root for a specific commit. |
 | **TREE_ENTRY** | `id` (PK), `tree_hash` (FK), `name`, `mode`, `object_hash` (FK) | Maps filenames to their physical storage (Blobs) or sub-directories (Trees). |
 | **BLOB** | `blob_hash` (PK), `size_bytes`, `storage_path`, `is_compressed` | Stores the actual file content, indexed by its SHA-256 hash for deduplication. |
@@ -76,3 +76,46 @@ Inside your component folders (e.g., `api/tests`), you define decoupled pytest m
 docker-compose run --rm dev-env pytest
 ```
 When all individual tests hit an Exit Code 0, the final seamless pipeline guarantees successful deployment perfectly aligned.
+
+## 7. Using DataHub in Your ML Projects (CLI Guide)
+
+DataHub is designed to be a drop-in Version Control System for any Machine Learning repository. To natively track your data changes seamlessly, follow these CLI commands.
+
+*Disclaimer: Since DataHub enforces strict dependency isolation, all commands must be executed through the Docker `dev-env` shell container.*
+
+**1. Initialize a Repository**
+Navigate to your project folder where your data lives and initialize the internal Merkle trackers:
+```bash
+# Example running from your dataset folder
+docker-compose run --rm -w /app/your_project dev-env python -m cli.main init
+```
+
+**2. Commit Your Datasets & Code**
+Modifying code, datasets, or metrics? The engine automatically calculates the minimal exact physical file changes hashing natively to Content-Addressable Storage (CAS), preventing duplication!
+```bash
+docker-compose run --rm -w /app/your_project dev-env python -m cli.main push http://localhost:8000 -m "Added latest ResNet weights"
+```
+
+**3. Analyze Merkle Graph History**
+At any point, track the history of datasets and lineage:
+```bash
+docker-compose run --rm -w /app/your_project dev-env python -m cli.main log http://localhost:8000
+```
+
+**4. Query the Automated Metadata Layer**
+DataHub natively parses metrics (like CSV schemas or JSON evaluation metrics). Use our advanced Domain Specific Language (DSL) to search previous commits for specific AI properties!
+```bash
+docker-compose run --rm -w /app/your_project dev-env python -m cli.main query http://localhost:8000 "row_count > 10000"
+```
+
+## 8. API Gateway Endpoints Spec
+
+The system relies on a seamless FastAPI Gateway exposing Python contracts to the User CLI.
+
+| Endpoint | Method | Payload | Function |
+| :--- | :--- | :--- | :--- |
+| `/blobs` | `POST` | `multipart/form-data` | Streams binary files into internal Content-Addressable Storage via chunking. |
+| `/check_hash/{hash}` | `GET` | *(Path Variable)* | Verifies if a SHA-256 chunk already exists globally (enabling deduplication). |
+| `/commit` | `POST` | `{"commit_hash"..., "entries": [...]}` | Writes a logical version snapshot and extracts dataset metrics on the server backend. |
+| `/log` | `GET` | *(None)* | Retrieves the entire Git-like linear Postgres representation of the `Commit` and `Tree` DAG. |
+| `/query` | `POST` | `{"query": "operator > value"}` | Invokes the AST Parser against DataHub's extracted metadata tables to fetch advanced insights. |
