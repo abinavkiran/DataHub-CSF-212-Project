@@ -4,7 +4,7 @@ import os
 
 # Import contracts from Module 1 (Database) and Module 2 (Storage)
 from infrastructure.db import SessionLocal, Commit, Tree, TreeEntry, ObjectType
-from storage.engine import put_blob
+from storage.engine import put_blob, BLOB_DIR
 
 app = FastAPI(title="DataHub Node API")
 
@@ -15,6 +15,12 @@ def get_db_session():
         yield db
     finally:
         db.close()
+
+@app.get("/check_hash/{blob_hash}")
+async def check_hash(blob_hash: str):
+    """Checks whether a blob already exists to avoid redundant uploads from CLI."""
+    blob_path = os.path.join(BLOB_DIR, blob_hash)
+    return {"exists": os.path.exists(blob_path)}
 
 @app.post("/blobs/")
 async def upload_blob(file: UploadFile = File(...)):
@@ -37,6 +43,7 @@ async def create_commit(payload: dict, session: Session = Depends(get_db_session
     parent_hash = payload.get("parent_hash")
     author = payload.get("author", "unknown")
     message = payload.get("message", "")
+    entries = payload.get("entries", payload.get("tree_entries", []))
     
     if not commit_hash or not tree_hash:
         raise HTTPException(status_code=400, detail="commit_hash and tree_hash are required")
@@ -63,6 +70,29 @@ async def create_commit(payload: dict, session: Session = Depends(get_db_session
     )
     
     session.add(new_commit)
+
+    # Create optional tree entries if provided by the push lifecycle payload
+    for entry in entries:
+        name = entry.get("name")
+        object_hash = entry.get("object_hash")
+        object_type_raw = entry.get("object_type")
+
+        if not name or not object_hash or not object_type_raw:
+            raise HTTPException(status_code=400, detail="Each tree entry requires name, object_hash, and object_type")
+
+        try:
+            object_type = ObjectType(object_type_raw)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=f"Invalid object_type: {object_type_raw}") from exc
+
+        session.add(
+            TreeEntry(
+                tree_hash=tree_hash,
+                name=name,
+                object_hash=object_hash,
+                object_type=object_type
+            )
+        )
     
     try:
         session.commit()
