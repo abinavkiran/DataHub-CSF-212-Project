@@ -64,11 +64,29 @@ Everything operates inside Docker natively. Natively installing local dependenci
 
 ### Bootstrapping The Repository
 1. Install Docker Desktop.
-2. Spin up the underlying Database and unified isolated test shell:
+2. Create a root-level `credentials.json` file (local only, do not commit) with your database credentials:
+   ```json
+   {
+     "database": {
+       "user": "user",
+       "password": "password",
+       "name": "datahub",
+       "host": "db",
+       "port": 5432
+     }
+   }
+   ```
+3. Sync Docker database environment values from `credentials.json`:
+   ```bash
+   ./sync_credentials_env.ps1
+   # or in cmd
+   sync_credentials_env.cmd
+   ```
+4. Spin up the underlying Database and unified isolated test shell:
    ```bash
    docker-compose up -d --build
    ```
-3. Your local folder dynamically mounts inside the container (`dev-env`), enabling instant development reflection natively avoiding OS mismatching scripts. 
+5. Your local folder dynamically mounts inside the container (`dev-env`), enabling instant development reflection natively avoiding OS mismatching scripts. 
 
 ### Running Modular Assertions
 Inside your component folders (e.g., `api/tests`), you define decoupled pytest methods enforcing your individual components constraints smoothly. Execute them blindly utilizing Docker:

@@ -4,15 +4,15 @@ services:
   db:
     image: postgres:15-alpine
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: datahub
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d datahub"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -22,7 +22,10 @@ services:
     volumes:
       - .:/app
     environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/datahub
+      - DATABASE_URL=${DATABASE_URL}
+      - DATAHUB_CREDENTIALS_FILE=/app/credentials.json
+      - DATAHUB_DB_HOST=db
+      - DATAHUB_DB_PORT=${DB_PORT}
       - PYTHONPATH=/app
     depends_on:
       db:

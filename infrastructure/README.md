@@ -11,6 +11,28 @@ To prevent localized errors (like missing Python binaries or OS-specific depende
 
 ### 1. Build & Start the Environment
 From the root of the repository, execute the following to instantiate the shared database (`db`) alongside the synchronized execution environment map (`dev-env`). 
+
+First, create a root-level `credentials.json` file (local only) with this structure:
+```json
+{
+	"database": {
+		"user": "user",
+		"password": "password",
+		"name": "datahub",
+		"host": "db",
+		"port": 5432
+	}
+}
+```
+
+Then sync Docker environment values from the root `credentials.json` file:
+```bash
+./sync_credentials_env.ps1
+# or in cmd
+sync_credentials_env.cmd
+```
+
+Then start the environment:
 ```bash
 docker-compose up -d --build
 ```

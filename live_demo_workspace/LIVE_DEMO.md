@@ -2,6 +2,22 @@
 
 This workspace is designed for a live terminal demo where you run each step manually and prove results through CLI output and direct database queries.
 
+Database credentials are centralized in `credentials.json` at the repository root.
+
+Before running the demo, ensure this file exists at the repository root:
+
+```json
+{
+	"database": {
+		"user": "user",
+		"password": "password",
+		"name": "datahub",
+		"host": "db",
+		"port": 5432
+	}
+}
+```
+
 ## 0. Start From a Clean Slate (Optional but Recommended)
 
 If you want demo-only rows in `log` and `query`, reset Docker volumes first:
@@ -14,7 +30,18 @@ docker compose down -v
 
 Run these commands from repository root:
 
+PowerShell:
+
 ```powershell
+./sync_credentials_env.ps1
+docker compose up -d --build
+docker compose exec dev-env uvicorn api.server:app --host 0.0.0.0 --port 8000
+```
+
+cmd:
+
+```bat
+sync_credentials_env.cmd
 docker compose up -d --build
 docker compose exec dev-env uvicorn api.server:app --host 0.0.0.0 --port 8000
 ```
@@ -122,7 +149,45 @@ docker compose exec db psql -P pager=off -U user -d datahub -c "SELECT id, targe
 docker compose exec db psql -P pager=off -U user -d datahub -c "SELECT id, tree_hash, name, object_hash, object_type FROM tree_entry ORDER BY id DESC LIMIT 20;"
 ```
 
-## 5. Reset Demo Data (Optional)
+## 5. Live Table Website (Terminal D Optional)
+
+This starts a live website that shows every table and all rows, refreshing every 5 seconds.
+
+PowerShell:
+
+```powershell
+cd live_demo_workspace
+.\run_db_dashboard.ps1
+```
+
+cmd:
+
+```bat
+cd live_demo_workspace
+run_db_dashboard.cmd
+```
+
+Open in browser:
+
+```text
+http://localhost:8090
+```
+
+Optional custom port:
+
+PowerShell:
+
+```powershell
+.\run_db_dashboard.ps1 8095
+```
+
+cmd:
+
+```bat
+run_db_dashboard.cmd 8095
+```
+
+## 6. Reset Demo Data (Optional)
 
 If you want a fresh rerun in this folder:
 
